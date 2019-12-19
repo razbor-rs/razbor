@@ -1,5 +1,5 @@
 mexpr = { SOI ~ seq ~ EOI }
-expr = _{ m | list | name | number | str }
+expr = _{ m | list | name | number | string }
 seq = _{ (expr ~ ("," ~ expr)*)? ~ ","? }
 m = { name ~ "[" ~ seq ~ "]" }
 list = { "[" ~ seq ~ "]" }
@@ -9,8 +9,8 @@ name = {
     | ("_" ~ ("." | XID_CONTINUE)*)
 }
 number = { ASCII_HEX_DIGIT+ }
-str = _{ "\"" ~ string ~ "\"" }
-string = { (!"\"" ~ ANY)* }
-
+string = ${ "\"" ~ inner ~ "\"" }
+inner = @{ (!"\"" ~ ANY)* }
 
 WHITESPACE = _{ " " | NEWLINE | "\t" }
+COMMENT = _{ "//" ~ (!NEWLINE ~ ANY)* ~ (NEWLINE | EOI) }

@@ -43,7 +43,7 @@ impl Mexpr {
             Rule::number => 
                 Mexpr::Number(pair.as_str().to_owned()),
             Rule::string =>
-                Mexpr::String(pair.as_str().to_owned()),
+                Mexpr::String(pair.into_inner().next().unwrap().as_str().to_owned()),
             _ => panic!("{:?}", pair)
         }
         
@@ -52,7 +52,7 @@ impl Mexpr {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let parsed =
-        MexprParser::parse(Rule::mexpr, "foo[a, b, \"c\", f[g, []]]")?.next().unwrap();
+        MexprParser::parse(Rule::mexpr, "foo[a, b, \"c d\", f[g, []]]")?.next().unwrap();
     let expr = Mexpr::from_parsed(parsed);
     println!("{:?}", expr);
 
