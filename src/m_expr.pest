@@ -1,0 +1,16 @@
+mexpr = { SOI ~ seq ~ EOI }
+expr = _{ m | list | name | number | str }
+seq = _{ (expr ~ ("," ~ expr)*)? ~ ","? }
+m = { name ~ "[" ~ seq ~ "]" }
+list = { "[" ~ seq ~ "]" }
+
+name = {
+    (XID_START ~ ("." | XID_CONTINUE)*)
+    | ("_" ~ ("." | XID_CONTINUE)*)
+}
+number = { ASCII_HEX_DIGIT+ }
+str = _{ "\"" ~ string ~ "\"" }
+string = { (!"\"" ~ ANY)* }
+
+
+WHITESPACE = _{ " " | NEWLINE | "\t" }
