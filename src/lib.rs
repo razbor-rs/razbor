@@ -11,6 +11,7 @@ pub enum Mexpr {
     List(Vec<Mexpr>),
     Name(String),
     Number(String),
+    OctNumber(String),
     HexNumber(String),
     String(String),
 }
@@ -42,6 +43,8 @@ impl Mexpr {
                 Mexpr::Name(pair.as_str().to_owned()),
             Rule::number =>
                 Mexpr::Number(pair.as_str().to_owned()),
+            Rule::oct_number =>
+                Mexpr::OctNumber(pair.as_str().to_owned()),
             Rule::hex_number =>
                 Mexpr::HexNumber(pair.as_str().to_owned()),
             Rule::string =>
