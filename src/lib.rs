@@ -11,6 +11,7 @@ pub enum Mexpr {
     List(Vec<Mexpr>),
     Name(String),
     Number(String),
+    HexNumber(String),
     String(String),
 }
 
@@ -41,6 +42,8 @@ impl Mexpr {
                 Mexpr::Name(pair.as_str().to_owned()),
             Rule::number =>
                 Mexpr::Number(pair.as_str().to_owned()),
+            Rule::hex_number =>
+                Mexpr::HexNumber(pair.as_str().to_owned()),
             Rule::string =>
                 Mexpr::String(pair.into_inner().next().unwrap().as_str().to_owned()),
             _ => panic!("{:?}", pair)
