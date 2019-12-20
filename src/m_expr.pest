@@ -9,8 +9,13 @@ name = {
     | ("_" ~ ("." | XID_CONTINUE)*)
 }
 number = { ASCII_HEX_DIGIT+ }
+
 string = ${ "\"" ~ inner ~ "\"" }
-inner = @{ (!"\"" ~ ANY)* }
+inner = @{ char* }
+char = {
+    !("\"" | "\\") ~ ANY
+    | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+}
 
 WHITESPACE = _{ " " | NEWLINE | "\t" }
 COMMENT = _{ "//" ~ (!NEWLINE ~ ANY)* ~ (NEWLINE | EOI) }
