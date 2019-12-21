@@ -8,12 +8,8 @@ name = {
     (XID_START ~ ("." | XID_CONTINUE)*)
     | ("_" ~ ("." | XID_CONTINUE)*)
 }
-number = _{ octal | hexdecimal | decimal }
-decimal = {
-    ASCII_NONZERO_DIGIT ~ ASCII_DIGIT+ // a number starting with a non-zero digit
-    | ASCII_DIGIT                      // a number which is a non-zero digit itself
-}
-octal = { "0" ~ ASCII_OCT_DIGIT+ }
+number = _{ hexdecimal | decimal }
+decimal = { ASCII_DIGIT+ }
 hexdecimal = { "0x" ~ ASCII_HEX_DIGIT+ }
 string = ${ "\"" ~ inner ~ "\"" }
 inner = @{ char* }
