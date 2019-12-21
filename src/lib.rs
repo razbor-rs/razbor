@@ -11,7 +11,6 @@ pub enum Mexpr {
     List(Vec<Mexpr>),
     Name(String),
     Decimal(String),
-    Octal(String),
     Hexdecimal(String),
     String(String),
 }
@@ -43,14 +42,11 @@ impl Mexpr {
                 Mexpr::Name(pair.as_str().to_owned()),
             Rule::decimal =>
                 Mexpr::Decimal(pair.as_str().to_owned()),
-            Rule::octal =>
-                Mexpr::Octal(pair.as_str().to_owned()),
             Rule::hexdecimal =>
                 Mexpr::Hexdecimal(pair.as_str().to_owned()),
             Rule::string =>
                 Mexpr::String(pair.into_inner().next().unwrap().as_str().to_owned()),
             _ => panic!("{:?}", pair)
         }
-
     }
 }
