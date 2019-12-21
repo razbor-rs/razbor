@@ -1,5 +1,5 @@
 mexpr = { SOI ~ seq ~ EOI }
-expr = _{ m | list | name | int | string }
+expr = _{ m | list | name | number | string }
 seq = _{ (expr ~ ("," ~ expr)*)? ~ ","? }
 m = { name ~ "[" ~ seq ~ "]" }
 list = { "[" ~ seq ~ "]" }
@@ -8,13 +8,13 @@ name = {
     (XID_START ~ ("." | XID_CONTINUE)*)
     | ("_" ~ ("." | XID_CONTINUE)*)
 }
-int = _{ oct_number | hex_number | number }
-number = {
+number = _{ octal | hexdecimal | decimal }
+decimal = {
     ASCII_NONZERO_DIGIT ~ ASCII_DIGIT+ // a number starting with a non-zero digit
     | ASCII_DIGIT                      // a number which is a non-zero digit itself
 }
-oct_number = { "0" ~ ASCII_OCT_DIGIT + }
-hex_number = { "0x" ~ ASCII_HEX_DIGIT+ }
+octal = { "0" ~ ASCII_OCT_DIGIT+ }
+hexdecimal = { "0x" ~ ASCII_HEX_DIGIT+ }
 string = ${ "\"" ~ inner ~ "\"" }
 inner = @{ (!"\"" ~ ANY)* }
 

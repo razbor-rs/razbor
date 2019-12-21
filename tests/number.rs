@@ -6,18 +6,18 @@ fn decimal() {
     parses_to! {
         parser: MexprParser,
         input:  "0",
-        rule:   Rule::int,
+        rule:   Rule::number,
         tokens: [
-            number(0, 1)
+            decimal(0, 1)
         ]
     };
 
     parses_to! {
         parser: MexprParser,
         input:  "42",
-        rule:   Rule::int,
+        rule:   Rule::number,
         tokens: [
-            number(0, 2)
+            decimal(0, 2)
         ]
     };
 }
@@ -27,18 +27,18 @@ fn octal() {
     parses_to! {
         parser: MexprParser,
         input:  "00",
-        rule:   Rule::int,
+        rule:   Rule::number,
         tokens: [
-            oct_number(0, 2)
+            octal(0, 2)
         ]
     };
 
     parses_to! {
         parser: MexprParser,
         input:  "042",
-        rule:   Rule::int,
+        rule:   Rule::number,
         tokens: [
-            oct_number(0, 3)
+            octal(0, 3)
         ]
     };
 }
@@ -48,13 +48,13 @@ fn hexadecimal() {
     parses_to! {
         parser: MexprParser,
         input:  "0x42",
-        rule:   Rule::int,
+        rule:   Rule::hexdecimal,
         tokens: [
-            hex_number(0, 4)
+            hexdecimal(0, 4)
         ]
     };
 
-    let parsed = MexprParser::parse(razbor::Rule::hex_number, "0x");
+    let parsed = MexprParser::parse(razbor::Rule::hexdecimal, "0x");
     assert!(parsed.is_err());
 }
 
@@ -66,11 +66,11 @@ fn number() {
         rule:   Rule::list,
         tokens: [
             list(0, 20, [
-                number(1, 2),
-                number(4, 5),
-                oct_number(7, 9),
-                number(11, 13),
-                hex_number(15, 19),
+                decimal(1, 2),
+                decimal(4, 5),
+                octal(7, 9),
+                decimal(11, 13),
+                hexdecimal(15, 19),
             ])
         ]
     };
