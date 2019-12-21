@@ -1,6 +1,36 @@
 use pest::iterators::Pair;
 use pest_derive::Parser;
 
+use std::path::Path;
+
+pub mod import;
+pub mod path;
+
+#[derive(Debug, Clone, PartialEq)]
+struct UnknownError;
+
+impl std::fmt::Display for UnknownError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        writeln!(f, "Unknown error")
+    }
+}
+
+impl std::error::Error for UnknownError { }
+
+#[derive(Debug, Clone, PartialEq)]
+struct StringError(String);
+
+impl std::fmt::Display for StringError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        writeln!(f, "ERROR: {}", self.0)
+    }
+}
+
+impl std::error::Error for StringError { }
+
+// Some day there will be a proper type here
+type Error = Box<dyn std::error::Error>;
+
 #[derive(Parser)]
 #[grammar = "m_expr.pest"]
 pub struct MexprParser;
@@ -82,4 +112,56 @@ impl Mexpr {
             _ => panic!("{:?}", pair),
         }
     }
+}
+
+pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<Mexpr, Error> {
+    use pest::Parser;
+
+    let data = std::fs::read_to_string(path).unwrap();
+    let parsed =
+        MexprParser::parse(Rule::mexpr, &data)?
+        .next().ok_or(UnknownError)?;
+
+    Ok(Mexpr::from_parsed(parsed))
+}
+
+fn is_m_name(expr: &Mexpr, name: &str) -> bool {
+    let n = name;
+
+    match expr {
+        Mexpr::Apply { name, .. } =>
+            n == name,
+        _ => false,
+    }
+}
+
+fn destruct_apply(expr: Mexpr) -> Option<(String, Vec<Mexpr>)> {
+    match expr {
+        Mexpr::Apply { name, body } => Some((name, body)),
+        _ => None
+    }
+}
+
+
+fn destruct_name(expr: Mexpr) -> Option<String> {
+    match expr {
+        Mexpr::Name(n) => Some(n),
+        _ => None
+    }
+}
+
+fn get_name_value(expr: &[Mexpr]) -> Option<(&String, &Mexpr)> {
+    let mut iter = expr.iter();
+    let head = iter.next()
+        .and_then(|h|
+            match h {
+                Mexpr::Name(n) => Some(n),
+                _ => None,
+            }
+        )?;
+    let tail = iter.next()?;
+
+    if iter.next().is_some() { return None };
+
+    Some((head, tail))
 }

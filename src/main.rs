@@ -1,16 +1,33 @@
-use pest::Parser;
-use razbor::MexprParser;
-use std::error::Error;
+use razbor::{
+    parse_file,
+    import::include_imports,
+    path::ExprConverter,
+    path::NameResolver,
+};
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let parsed = MexprParser::parse(
-        razbor::Rule::mexpr,
-        "foo[a, b, \"c d\", 0, 02, 12, 0x01, f[g, []]]",
-    )?
-    .next()
-    .unwrap();
-    let expr = razbor::Mexpr::from_parsed(parsed);
-    println!("{:?}", expr);
+use std::path::Path;
+
+type Error = Box<dyn std::error::Error>;
+
+fn main() -> Result<(), Error> {
+    let tox = parse_file("../tox/tox-ksy/razbor/tox.mexpr")?;
+
+    let imports_included = include_imports(tox, Path::new("../tox/tox-ksy/razbor"))?;
+
+    let mut table = ExprConverter::new().convert(&imports_included);
+
+    let mut resolver = NameResolver::new();
+    resolver.resolve_names(&mut table);
+
+    for row in &table.rows {
+        println!("{} -> {}", row.0, row.1);
+    }
+
+    println!();
+
+    for name in resolver.not_found {
+        println!("NOT FOUND: {}", name);
+    }
 
     Ok(())
 }
