@@ -15,6 +15,47 @@ pub enum Mexpr {
     String(String),
 }
 
+impl std::fmt::Display for Mexpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        use Mexpr::*;
+
+        match self {
+            Apply { name, body } => {
+                write!(f, "{}[", name)?;
+                if !body.is_empty() {
+                    body[0].fmt(f)?;
+
+                    for e in &body[1..] {
+                        write!(f, ", ")?;
+                        e.fmt(f)?;
+                    }
+                }
+
+                write!(f, "]")?;
+            }
+            List(body) => {
+                write!(f, "[")?;
+                if !body.is_empty() {
+                    body[0].fmt(f)?;
+
+                    for e in &body[1..] {
+                        write!(f, ", ")?;
+                        e.fmt(f)?;
+                    }
+                }
+
+                write!(f, "]")?;
+            }
+            Name(name) => name.fmt(f)?,
+            Decimal(dec) => dec.fmt(f)?,
+            Hexdecimal(hex) => hex.fmt(f)?,
+            String(s) => write!(f, "\"{}\"", s)?,
+        }
+
+        Ok(())
+    }
+}
+
 impl Mexpr {
     pub fn from_parsed(pair: Pair<Rule>) -> Self {
         match pair.as_rule() {
