@@ -1,4 +1,4 @@
-use pest::{Parser, parses_to, consumes_to};
+use pest::{consumes_to, parses_to, Parser};
 use razbor::{MexprParser, Rule};
 
 #[test]

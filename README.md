@@ -1,5 +1,5 @@
 # Razbor
 
-[![Travis Build Status](https://travis-ci.org/suhr/razbor.svg?branch=master)](https://travis-ci.org/suhr/razbor)
+![Build Status](https://github.com/suhr/razbor/workflows/Rust/badge.svg)
 
 ![](https://i.imgur.com/0oGNYGk.jpg)
