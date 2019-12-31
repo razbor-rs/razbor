@@ -28,12 +28,15 @@ impl RzPath {
     }
 
     pub fn push_module(&mut self, module: String) {
+        assert!(!module.is_empty());
         assert!(self.data.is_empty());
 
         self.modules.push(module);
     }
 
     pub fn push_data(&mut self, data: String) {
+        assert!(!data.is_empty());
+
         self.data.push(data)
     }
 
@@ -102,19 +105,22 @@ impl RzPath {
             .map(|(a, b)| a.cmp(b))
             .fold(O::Equal, choose);
 
-        match (self.modules.len().cmp(&prefix.modules.len()), self.data.len().cmp(&prefix.data.len())) {
-            (O::Greater, _) => cmp,
-            (O::Less, _) => O::Less,
-            (O::Equal, O::Less) =>
-                choose(cmp, O::Less),
-            _ =>
-                choose(
-                    cmp,
-                    self.data.iter()
-                        .zip(&prefix.data)
-                        .map(|(a, b)| a.cmp(b))
-                        .fold(O::Equal, choose)
-                ),
+        if self.is_module_path() && prefix.is_module_path() {
+            cmp
+        }
+        else {
+            let cmp = choose(
+                cmp,
+                self.modules.len().cmp(&prefix.modules.len())
+            );
+
+            choose(
+                cmp,
+                self.data.iter()
+                    .zip(&prefix.data)
+                    .map(|(a, b)| a.cmp(b))
+                    .fold(O::Equal, choose)
+            )
         }
     }
 }
@@ -359,6 +365,48 @@ impl NameResolver {
 
             self.resolve_in_expr(path, &mut value, &name_map);
             table.rows[i].1 = value
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    fn rzpath() -> impl Strategy<Value=RzPath> {
+        use proptest::collection::vec;
+        let s1 = proptest::string::string_regex("[a-zA-Z0-9_.]{1, 16}").unwrap();
+        let s2 = proptest::string::string_regex("[a-zA-Z0-9_.]{1, 16}").unwrap();
+
+        (vec(s1, 0..32), vec(s2, 0..32))
+            .prop_map(|(modules, data)| RzPath { modules, data } )
+    }
+
+    proptest! {
+        #[test]
+        fn cmp_is_transitive(a in rzpath(), b in rzpath(), c in rzpath()) {
+            if a.cmp(&b) == b.cmp(&c) {
+                assert_eq!(a.cmp(&c), a.cmp(&b))
+            }
+        }
+
+        #[test]
+        fn cmp_is_reflexive(p in rzpath()) {
+            assert_eq!(p.cmp(&p), std::cmp::Ordering::Equal);
+        }
+
+        #[test]
+        fn cmp_prefix_is_transitive(a in rzpath(), b in rzpath(), c in rzpath()) {
+            if a.cmp_prefix(&b) == b.cmp_prefix(&c) {
+                assert_eq!(a.cmp_prefix(&c), a.cmp_prefix(&b))
+            }
+        }
+
+        #[test]
+        fn cmp_prefix_is_reflexive(p in rzpath()) {
+            assert_eq!(p.cmp_prefix(&p), std::cmp::Ordering::Equal);
         }
     }
 }
