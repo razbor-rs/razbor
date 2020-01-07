@@ -1,0 +1,1 @@
+mod should_succeed;

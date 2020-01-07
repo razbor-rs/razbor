@@ -1,0 +1,4 @@
+ty[Inside, [
+    ty[a, u1],
+    ty[b, a],
+]],
