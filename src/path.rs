@@ -13,6 +13,15 @@ pub enum PathSegment {
     Name(SmolStr),
 }
 
+impl std::fmt::Display for PathSegment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PathSegment::Pos(n) => write!(f, "{}", n),
+            PathSegment::Name(name) => write!(f, "{}", name)
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Default)]
 pub struct RzPath {
     pub modules: Vec<SmolStr>,

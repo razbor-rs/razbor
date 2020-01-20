@@ -7,14 +7,17 @@ type Error = Box<dyn std::error::Error>;
 
 fn main() -> Result<(), Error> {
     let loader = razbor::expr::ExprLoader::new();
-    let (file_table, tox) = loader.load("../tox/tox-ksy/razbor/tox.mexpr");
+    let (file_table, tox) = loader.load("../tox/tox-razbor/src/tox.mexpr");
     let mods = tox.unwrap();
 
     let converter = razbor::path::ExprConverter::new();
     let mut table = converter.convert(&mods).unwrap();
 
     let namer = razbor::path::NameResolver::new();
-    let errors = namer.resolve(&mut table).unwrap_err();
+    namer.resolve(&mut table).unwrap();
+
+    let ty_conv = razbor::types::ExprToType::new();
+    let errors = ty_conv.into_types(table).unwrap_err();
     
     let mut sourcer = razbor::report::Sourcer::default();
     for err in &errors {
