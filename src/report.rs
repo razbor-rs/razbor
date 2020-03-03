@@ -34,7 +34,6 @@ fn paragraph_indices(
         .unwrap_or(newlines.len() - 1);
 
     (ls + 2, from + 1, to)
-
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -210,27 +209,27 @@ impl ToSnippet for crate::types::ExprToTypeError {
             },
             InvalidType(loc) => {
                 let source = sourcer.source(*loc).unwrap();
-                
+
                 basic_error(source, loc.span, "invalid type")
             },
             InvalidSize(loc) => {
                 let source = sourcer.source(*loc).unwrap();
-                
+
                 basic_error(source, loc.span, "invalid size")
             },
             InvalidRel(loc) => {
                 let source = sourcer.source(*loc).unwrap();
-                
+
                 basic_error(source, loc.span, "invalid relation")
             },
             InvalidRelExpr(loc) => {
                 let source = sourcer.source(*loc).unwrap();
-                
+
                 basic_error(source, loc.span, "invalid expression in relation")
             },
             UnsupportedList(loc) => {
                 let source = sourcer.source(*loc).unwrap();
-                
+
                 basic_error(source, loc.span, "lists inside types are unsupported")
             },
         }

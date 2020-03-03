@@ -34,12 +34,13 @@ pub enum TypeExpr {
     Ref(RzPath),
 
     Liq(Box<TypeExpr>, Vec<Ranged<Rel>>),
-    // Size(Vec<Ranged<Rel>>),
     Val(Value, Box<TypeExpr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Size {}
+pub struct Size {
+    rels: Vec<Ranged<Rel>>
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Rel {
@@ -50,12 +51,15 @@ pub enum Rel {
     Gt(Ranged<RelExpr>, Ranged<RelExpr>),
 }
 
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum RelExpr {
     Hole,
     Sizeof,
     Integer(SmolStr),
     Ref(RzPath),
+    Size(Size),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -141,7 +145,51 @@ fn as_rel_list(expr: &Ranged<RawExpr>) -> Result<Vec<Ranged<Rel>>, ExprToTypeErr
 }
 
 fn as_size(expr: &Ranged<RawExpr>) -> Result<Ranged<Size>, ExprToTypeError> {
-    return Err(ExprToTypeError::InvalidSize(expr.range.unwrap()))
+    let mut rels = vec![];
+    match &expr.data {
+        RawExpr::Name(n) if n == "_" => (),
+        RawExpr::Decimal(num)
+        | RawExpr::Hexdecimal(num) =>
+            rels.push(
+                Ranged {
+                    data: Rel::Eq(
+                        Ranged::new(RelExpr::Hole),
+                        Ranged {
+                            data: RelExpr::Integer(num.clone()),
+                            range: expr.range,
+                        }
+                    ),
+                    range: expr.range
+                }
+            ),
+        RawExpr::Path(path) =>
+            rels.push(Ranged {
+                data: Rel::Eq(
+                    Ranged::new(RelExpr::Hole),
+                    Ranged {
+                        data: RelExpr::Ref(path.clone()),
+                        range: expr.range
+                    }
+                ),
+                range: expr.range
+            }),
+        RawExpr::Apply { head, body } if head.data == "and" => {
+            for e in body {
+                let sz = as_size(e)?;
+                rels.extend(sz.data.rels);
+            }
+        },
+        RawExpr::Apply { head, .. } if is_rel_name(&head.data) => {
+            let rel = as_rel(expr)?;
+            rels.push(rel)
+        },
+        _ => return Err(ExprToTypeError::InvalidSize(expr.range.unwrap())),
+    }
+
+    Ok(Ranged {
+        data: Size { rels },
+        range: expr.range,
+    })
 }
 
 fn as_simple_type(expr: &Ranged<RawExpr>) -> Option<Ranged<TypeExpr>> {
@@ -178,8 +226,6 @@ fn as_simple_type(expr: &Ranged<RawExpr>) -> Option<Ranged<TypeExpr>> {
                 TypeExpr::U(4, Be),
             RawExpr::Name(n) if n == "u8" =>
                 TypeExpr::U(8, Be),
-            RawExpr::Name(n) if n == "u1le" =>
-                TypeExpr::U(1, Le),
             RawExpr::Name(n) if n == "u2le" =>
                 TypeExpr::U(2, Le),
             RawExpr::Name(n) if n == "u4le" =>
@@ -195,8 +241,6 @@ fn as_simple_type(expr: &Ranged<RawExpr>) -> Option<Ranged<TypeExpr>> {
                 TypeExpr::S(4, Be),
             RawExpr::Name(n) if n == "s8" =>
                 TypeExpr::S(8, Be),
-            RawExpr::Name(n) if n == "s1le" =>
-                TypeExpr::S(1, Le),
             RawExpr::Name(n) if n == "s2le" =>
                 TypeExpr::S(2, Le),
             RawExpr::Name(n) if n == "s4le" =>
@@ -343,7 +387,10 @@ impl ExprToType {
 
                     let num = self.push_err(as_size(&body[0])).ok()?;
 
-                    todo!()
+                    TypeExpr::Arr(
+                        Box::new(Ranged::new(TypeExpr::U(1, Endianness::Be))),
+                        num
+                    )
                 },
                 RawExpr::Apply { head, body } if &head.data == "size" => {
                     if body.len() != 1 {
@@ -359,8 +406,20 @@ impl ExprToType {
                     }
 
                     let size = self.push_err(as_size(&body[0])).ok()?;
+                    let rel_size = Ranged {
+                        data: RelExpr::Size(size.data),
+                        range: size.range
+                    };
 
-                    todo!()
+                    TypeExpr::Liq(
+                        Box::new(TypeExpr::Top),
+                        vec![Ranged::new(
+                            Rel::Eq(
+                                Ranged::new(RelExpr::Sizeof),
+                                rel_size
+                            )
+                        )]
+                    )
                 },
                 RawExpr::Path(path) =>
                     TypeExpr::Ref(path.clone()),
@@ -405,14 +464,14 @@ pub fn as_makam_ty(ty: &TypeExpr) -> String {
             format!("(s {} little_endian)", s),
         Arr(ty, num) => {
             let ty = as_makam_ty(&ty.data);
-            let num = todo!();
+            let num = as_makam_size(&num.data);
 
-            // format!("(arr {} [{}])", ty, num)
+            format!("(arr {} {})", ty, num)
         },
         Str(len) => {
-            let len = todo!();
+            let len = as_makam_size(&len.data);
 
-            // format!("(str [{}])", len)
+            format!("(str {})", len)
         },
         And(list) => {
             let list = list.iter()
@@ -431,7 +490,7 @@ pub fn as_makam_ty(ty: &TypeExpr) -> String {
         Ref(path) => {
             let path = as_makam_path(&path);
 
-            format!("(join [{}])", path)
+            format!("(ref [{}])", path)
         },
         Prod(_list) => todo!(),
         Liq(ty, rels) => {
@@ -465,6 +524,15 @@ pub fn as_makam_path(path: &RzPath) -> String {
     format!("(path [{}] [{}])", modules, data)
 }
 
+pub fn as_makam_size(size: &Size) -> String {
+    let rels = size.rels.iter()
+        .map(|r| as_makam_rel(&r.data))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    format!("[{}]", rels)
+}
+
 pub fn as_makam_value(value: &Value) -> String {
     match value {
         Value::Boolean(b) =>
@@ -482,6 +550,8 @@ pub fn as_makam_rel_expr(expr: &RelExpr) -> String {
             format!("(rel_int {})", i),
         RelExpr::Ref(path) =>
             format!("(rel_ref {})", as_makam_path(&path)),
+        RelExpr::Size(sz) =>
+            format!("(ref_size {})", as_makam_size(&sz)),
     }
 }
 

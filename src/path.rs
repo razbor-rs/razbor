@@ -239,6 +239,9 @@ impl ExprConverter {
         drop(self.current_name.data.pop())
     }
 
+    fn push_prod(&mut self, number: usize) {
+    }
+
     fn visit_list(&mut self, list: &[Ranged<RawExpr>]) {
         let mut num = 0;
         for e in list {
@@ -257,6 +260,8 @@ impl ExprConverter {
 
             num += 1
         }
+
+        self.push_prod(num)
     }
 
     fn visit_data(&mut self, data: &Ranged<RawExpr>, num: Option<usize>) {

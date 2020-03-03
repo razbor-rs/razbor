@@ -38,6 +38,15 @@ pub struct Ranged<T> {
     pub range: Option<Location>,
 }
 
+impl<T> Ranged<T> {
+    pub fn new(data: T) -> Self {
+        Ranged {
+            data,
+            range: None
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum RawExpr {
     Apply {

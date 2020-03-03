@@ -5,13 +5,15 @@ endinanness: type.
 big_endian: endinanness.
 little_endian: endinanness.
 
+rel: type.
 rel_expr: type.
+
 rel_hole: rel_expr.
 rel_sizeof: rel_expr.
 rel_int: int -> rel_expr.
 rel_ref: path -> rel_expr.
+ref_size: list rel -> rel_expr.
 
-rel: type.
 rel_lt: rel_expr -> rel_expr -> rel.
 rel_le: rel_expr -> rel_expr -> rel.
 rel_eq: rel_expr -> rel_expr -> rel.
@@ -41,7 +43,6 @@ join: list ty -> ty.
 ref: path -> ty.
 
 liq: ty -> list rel -> ty.
-size: list rel -> ty.
 val: value -> ty -> ty.
 
 prod: list path -> ty.

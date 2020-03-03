@@ -17,21 +17,29 @@ fn main() -> Result<(), Error> {
     namer.resolve(&mut table).unwrap();
 
     let ty_conv = razbor::types::ExprToType::new();
-    let errors = ty_conv.into_types(table).unwrap_err();
-    
-    let mut sourcer = razbor::report::Sourcer::default();
-    for err in &errors {
-        let id = err.file_id();
-        let path = &*file_table.files()[id];
-        sourcer.load_file(id, path);
+    // let errors = ty_conv.into_types(table).unwrap_err();
+    let ty_table = ty_conv.into_types(table).unwrap();
+
+    for row in ty_table.rows {
+        let path = razbor::types::as_makam_path(&row.path);
+        let ty = razbor::types::as_makam_ty(&row.ty.data);
+
+        println!("(typeof {} {})", path, ty);
     }
 
-    for err in &errors {
-        let snippet = err.to_snippet(&sourcer);
-        let dl = DisplayList::from(snippet);
-        let dlf = DisplayListFormatter::new(true, false);
-        println!("{}", dlf.format(&dl));
-    }
+    // let mut sourcer = razbor::report::Sourcer::default();
+    // for err in &errors {
+    //     let id = err.file_id();
+    //     let path = &*file_table.files()[id];
+    //     sourcer.load_file(id, path);
+    // }
+
+    // for err in &errors {
+    //     let snippet = err.to_snippet(&sourcer);
+    //     let dl = DisplayList::from(snippet);
+    //     let dlf = DisplayListFormatter::new(true, false);
+    //     println!("{}", dlf.format(&dl));
+    // }
 
     Ok(())
 }
