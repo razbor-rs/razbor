@@ -421,6 +421,18 @@ impl ExprToType {
                         )]
                     )
                 },
+                RawExpr::Apply { head, body } if &head.data == ":prod" => {
+                    let mut paths = vec![];
+                    for e in body {
+                        match &e.data {
+                            RawExpr::Path(path) =>
+                                paths.push(path.clone()),
+                            _ => unreachable!(),
+                        }
+                    }
+
+                    TypeExpr::Prod(paths)
+                }
                 RawExpr::Path(path) =>
                     TypeExpr::Ref(path.clone()),
                 RawExpr::List(_) => {
@@ -429,7 +441,7 @@ impl ExprToType {
                     );
 
                     return None
-                }
+                },
                 _ => {
                     self.errors.push(
                         ExprToTypeError::InvalidType(expr.range.unwrap())
@@ -492,7 +504,14 @@ pub fn as_makam_ty(ty: &TypeExpr) -> String {
 
             format!("(ref [{}])", path)
         },
-        Prod(_list) => todo!(),
+        Prod(paths) => {
+            let paths = paths.iter()
+                .map(|path| as_makam_path(&path))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            format!("(prod [{}])", paths)
+        },
         Liq(ty, rels) => {
             let ty = as_makam_ty(ty);
             let rels = rels.iter()

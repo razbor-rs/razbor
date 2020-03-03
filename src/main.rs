@@ -24,7 +24,7 @@ fn main() -> Result<(), Error> {
         let path = razbor::types::as_makam_path(&row.path);
         let ty = razbor::types::as_makam_ty(&row.ty.data);
 
-        println!("(typeof {} {})", path, ty);
+        println!("typeof {} {}.", path, ty);
     }
 
     // let mut sourcer = razbor::report::Sourcer::default();

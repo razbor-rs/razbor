@@ -239,7 +239,25 @@ impl ExprConverter {
         drop(self.current_name.data.pop())
     }
 
-    fn push_prod(&mut self, number: usize) {
+    // This hack provides prod types for Makam
+    fn record_prod(&mut self, number: usize) {
+        let paths = (0..number)
+            .map(|n| {
+                let mut path = self.current_path.clone();
+                path.data.push(PathSegment::Pos(n));
+                Ranged::new(RawExpr::Path(path))
+            })
+            .collect();
+
+        let prod = RawExpr::Apply {
+            head: Ranged::new(":prod".into()),
+            body: paths,
+        };
+
+        self.table.rows.push(TypeRow {
+            ty: Ranged::new(prod),
+            path: self.current_path.clone(),
+        })
     }
 
     fn visit_list(&mut self, list: &[Ranged<RawExpr>]) {
@@ -261,7 +279,7 @@ impl ExprConverter {
             num += 1
         }
 
-        self.push_prod(num)
+        self.record_prod(num)
     }
 
     fn visit_data(&mut self, data: &Ranged<RawExpr>, num: Option<usize>) {
