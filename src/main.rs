@@ -20,11 +20,12 @@ fn main() -> Result<(), Error> {
     // let errors = ty_conv.into_types(table).unwrap_err();
     let ty_table = ty_conv.into_types(table).unwrap();
 
+    println!(":- [ops].\n");
     for row in ty_table.rows {
         let path = razbor::types::as_makam_path(&row.path);
         let ty = razbor::types::as_makam_ty(&row.ty.data);
 
-        println!("typeof {} {}.", path, ty);
+        println!("{} <: {}.", path, ty);
     }
 
     // let mut sourcer = razbor::report::Sourcer::default();

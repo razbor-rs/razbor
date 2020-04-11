@@ -467,42 +467,42 @@ pub fn as_makam_ty(ty: &TypeExpr) -> String {
         Bool => "boolean".to_owned(),
         Int => "integer".to_owned(),
         U(s, Endianness::Be) =>
-            format!("(u {} big_endian)", s),
+            format!("u({}, big_endian)", s),
         U(s, Endianness::Le) =>
-            format!("(u {} little_endian)", s),
+            format!("u({}, little_endian)", s),
         S(s, Endianness::Be) =>
-            format!("(s {} big_endian)", s),
+            format!("s({}, big_endian)", s),
         S(s, Endianness::Le) =>
-            format!("(s {} little_endian)", s),
+            format!("s({}, little_endian)", s),
         Arr(ty, num) => {
             let ty = as_makam_ty(&ty.data);
             let num = as_makam_size(&num.data);
 
-            format!("(arr {} {})", ty, num)
+            format!("arr({}, {})", ty, num)
         },
         Str(len) => {
             let len = as_makam_size(&len.data);
 
-            format!("(str {})", len)
+            format!("str({})", len)
         },
         And(list) => {
             let list = list.iter()
                 .map(|ty| as_makam_ty(&ty.data))
                 .collect::<Vec<_>>()
                 .join(", ");
-            format!("(meet [{}])", list)
+            format!("meet([{}])", list)
         },
         Or(list) => {
             let list = list.iter()
                 .map(|ty| as_makam_ty(&ty.data))
                 .collect::<Vec<_>>()
                 .join(", ");
-            format!("(join [{}])", list)
+            format!("join([{}])", list)
         },
         Ref(path) => {
             let path = as_makam_path(&path);
 
-            format!("(ref [{}])", path)
+            format!("ref({})", path)
         },
         Prod(paths) => {
             let paths = paths.iter()
@@ -510,7 +510,7 @@ pub fn as_makam_ty(ty: &TypeExpr) -> String {
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            format!("(prod [{}])", paths)
+            format!("prod([{}])", paths)
         },
         Liq(ty, rels) => {
             let ty = as_makam_ty(ty);
@@ -519,13 +519,13 @@ pub fn as_makam_ty(ty: &TypeExpr) -> String {
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            format!("(liq {} [{}])", ty, rels)
+            format!("{} ⋮ [{}]", ty, rels)
         },
         Val(value, ty) => {
             let value = as_makam_value(value);
             let ty = as_makam_ty(ty);
 
-            format!("(val {} {})", value, ty)
+            format!("{} ∈ {}", value, ty)
         },
     }
 }
@@ -540,7 +540,7 @@ pub fn as_makam_path(path: &RzPath) -> String {
         .collect::<Vec<_>>()
         .join(", ");
 
-    format!("(path [{}] [{}])", modules, data)
+    format!("path([{}], [{}])", modules, data)
 }
 
 pub fn as_makam_size(size: &Size) -> String {
@@ -555,22 +555,22 @@ pub fn as_makam_size(size: &Size) -> String {
 pub fn as_makam_value(value: &Value) -> String {
     match value {
         Value::Boolean(b) =>
-            format!("(value_bool {})", b),
+            format!("vbool({})", b),
         Value::Integer(i) =>
-            format!("(value_int {})", i)
+            format!("vint({})", i)
     }
 }
 
 pub fn as_makam_rel_expr(expr: &RelExpr) -> String {
     match expr {
-        RelExpr::Hole => "rel_hole".to_owned(),
-        RelExpr::Sizeof => "rel_sizeof".to_owned(),
+        RelExpr::Hole => "hole".to_owned(),
+        RelExpr::Sizeof => "sizeof".to_owned(),
         RelExpr::Integer(i) =>
-            format!("(rel_int {})", i),
+            format!("rint({})", i),
         RelExpr::Ref(path) =>
-            format!("(rel_ref {})", as_makam_path(&path)),
+            format!("ref({})", as_makam_path(&path)),
         RelExpr::Size(sz) =>
-            format!("(ref_size {})", as_makam_size(&sz)),
+            format!("size({})", as_makam_size(&sz)),
     }
 }
 
@@ -580,31 +580,31 @@ pub fn as_makam_rel(rel: &Rel) -> String {
             let left = as_makam_rel_expr(&left.data);
             let right = as_makam_rel_expr(&right.data);
 
-            format!("(rel_lt {} {})", left, right)
+            format!("{} < {}", left, right)
         }
         Rel::Le(left, right) => {
             let left = as_makam_rel_expr(&left.data);
             let right = as_makam_rel_expr(&right.data);
 
-            format!("(rel_le {} {})", left, right)
+            format!("{} ≤ {}", left, right)
         }
         Rel::Eq(left, right) => {
             let left = as_makam_rel_expr(&left.data);
             let right = as_makam_rel_expr(&right.data);
 
-            format!("(rel_eq {} {})", left, right)
+            format!("{} = {}", left, right)
         }
         Rel::Ge(left, right) => {
             let left = as_makam_rel_expr(&left.data);
             let right = as_makam_rel_expr(&right.data);
 
-            format!("(rel_ge {} {})", left, right)
+            format!("{} ≥ {}", left, right)
         }
         Rel::Gt(left, right) => {
             let left = as_makam_rel_expr(&left.data);
             let right = as_makam_rel_expr(&right.data);
 
-            format!("(rel_gt {} {})", left, right)
+            format!("{} > {}", left, right)
         }
     }
 }
