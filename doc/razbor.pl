@@ -1,3 +1,6 @@
+:- use_module(library(pprint)).
+:- use_module(library(yall)).
+
 :- expects_dialect(sicstus).
 :- [tox].
 
@@ -74,13 +77,34 @@ match(X, [V|Cases]) :-
 % def reduce_meet: ty -> ty -> ty -> o.
 % def reduce_join: list ty -> list ty -> o.
 
+as_path(S, path(Mods, Data)) :-
+    split_string(S, " ", "", [ModsStr, DataStr]) *->
+        split_string(ModsStr, ".", "", Mods),
+        split_string(DataStr, ".", "", Data)
+    ;
+        split_string(S, ".", "", Mods),
+        Data = [].
+
 ctypeof(P, T) :-
     P <: Tx,
     subst(Tx, Ty),
     simpl(Ty, T).
 
+print_tox_ctypeof :-
+    findall(P, P <: _, RawTypes),
+    maplist(ctypeof_pair, RawTypes, CTypes),
+    WriteOps = [spacing(next_argument)],
+    print_term(CTypes, [write_options(WriteOps)]).
+
+ctypeof_pair(P, P <: T) :- ctypeof(P, T).
+
+print_ctypeof(PathStr) :-
+    as_path(PathStr, Path),
+    ctypeof(Path, T),
+    WriteOps = [right_margin(60), [spacing(next_argument)]],
+    print_term(T, WriteOps).
+
 is_simple(E) :-
-    E \= join([_|_]),
     E \= prod([_|_]).
 
 subst_(meet([X|Xs]), meet([Y|Ys])) :-
@@ -92,7 +116,7 @@ subst_(V ∈ Tx, V ∈ Ty) :-
     subst(Tx, Ty).
 subst_(ref(P), T) :-
     ctypeof(P, Tx),
-    if(is_simple(Tx), T = Tx, T = ref(P)).
+    if(is_simple(Tx), T = (Tx ⋅ [P]), T = ref(P)).
 subst(Tx, Ty) :-
     subst_(Tx, Ty) // Tx = Ty.
 
@@ -101,8 +125,10 @@ simpl_(Tx ⋮ P, Ty ⋮ P) :-
 simpl_(V ∈ Tx, V ∈ Ty) :-
     simpl(Tx, Ty).
 simpl_(meet([]), top).
+simpl_(meet([T]), T).
 simpl_(meet([X|Xs]), T) :-
-    reduce_meet(X, meet(Xs), T).
+    reduce_meet(X, meet(Xs), M),
+    simpl(M, T).
 simpl_(join([X|[]]), Y) :-
     simpl(X, Y).
 simpl_(join([X|Xs]), join(Z)) :-
@@ -140,7 +166,7 @@ reduce_meet(L, R, M) :- match((L, R, M), [
     (Tx, Ty ⋮ P, T ⋮ P) →
         reduce_meet(Tx, Ty, T),
     (Vx ∈ Tx, Vy ∈ Ty, V ∈ T) → (
-        false,
+        meet_values(Vx, Vy, V),
         reduce_meet(Tx, Ty, T)
     ),
     (Tx, V ∈ Ty, V ∈ T) →
@@ -154,6 +180,10 @@ reduce_meet(L, R, M) :- match((L, R, M), [
         append(Xs, Y, Ts),
         reduce_meet(X, meet(Ts), Z)
     ),
+    (meet([X]), Y, Z) →
+        reduce_meet(X, Y, Z),
+    (X, meet([Y]), Z) →
+        reduce_meet(X, Y, Z),
     (meet([X|Xs]), Y, Z) → (
         append(Xs, [Y], Ts),
         reduce_meet(X, meet(Ts), Z)
@@ -182,3 +212,5 @@ reduce_meet(L, R, M) :- match((L, R, M), [
     (prod(X), Y, Z) → fail,
     (X, prod(Y), Z) → fail
 ]) // M = bottom.
+
+meet_values(V, V, V).
