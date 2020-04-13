@@ -101,7 +101,12 @@ ctypeof_pair(P, P <: T) :- ctypeof(P, T).
 print_ctypeof(PathStr) :-
     as_path(PathStr, Path),
     ctypeof(Path, T),
-    WriteOps = [right_margin(60), [spacing(next_argument)]],
+    WriteOps = [
+        right_margin(60),
+        write_options([
+            spacing(next_argument)
+        ])
+    ],
     print_term(T, WriteOps).
 
 is_simple(E) :-
@@ -141,7 +146,7 @@ simpl(Tx, Ty) :-
 reduce_join(join([X|Xs]), Y) :-
     append(X, Xs, Z),
     reduce_join(Z, Y).
-reduce_join([X|Ys], [X, Zs]) :-
+reduce_join([X|Ys], [X|Zs]) :-
     reduce_join(Ys, Zs).
 reduce_join([], []).
 
