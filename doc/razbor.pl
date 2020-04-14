@@ -110,7 +110,8 @@ print_ctypeof(PathStr) :-
     print_term(T, WriteOps).
 
 is_simple(E) :-
-    E \= prod([_|_]).
+    E \= prod(_),
+    E \= join(_).
 
 subst_(meet([X|Xs]), meet([Y|Ys])) :-
     subst(X, Y),
@@ -219,3 +220,25 @@ reduce_meet(L, R, M) :- match((L, R, M), [
 ]) // M = bottom.
 
 meet_values(V, V, V).
+
+sizeof(P, S) :-
+    ctypeof(P, T),
+    sizeof_type(T, S).
+
+size_sum(Sx, Sy, S) :- fail.
+size_join(Sx, Sy, S) :- fail.
+size_mul(Sx, Sy, S) :- fail.
+
+sizeof_type(prod(Ts), S) :-
+    fail.
+
+sizeof_type(join(Ts), S) :-
+    fail.
+
+sizeof_type(u(S, _), [hole=rint(S)]).
+sizeof_type(_ ∈ T, S) :-
+    sizeof_type(T, S).
+sizeof_type(arr(T, N), S) :-
+    sizeof_type(T, St),
+    Sn = N,
+    size_mul(St, Sn, S).
