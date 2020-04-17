@@ -226,14 +226,51 @@ sizeof(P, S) :-
     sizeof_type(T, S).
 
 size_sum(Sx, Sy, S) :- fail.
-size_join(Sx, Sy, S) :- fail.
+
+size_join(Sx, Sy, S) :- match((Sx, Sy, S), [
+    (bottom, Y, Y),
+    (X, bottom, X),
+    (join(Xs), join(Ys), join(Zs)) →
+        append(Xs, Ys, Zs),
+    (X, join(Ys), join([X|Ys])),
+    (join(Xs), Y, join([Y|Xs])),
+    (X, Y, join([X, Y])) 
+]).
+
 size_mul(Sx, Sy, S) :- fail.
+size_unify(Sx, Sy, S) :- fail.
+
+size_constraint([], []).
+size_constraint([P|Ps], [S|Ss]) :-
+    (P, S) = (sizeof=C, hole=C) *->
+        size_constraint(Ps, Ss)
+    ;
+        size_constraint(Ps, [S|Ss]).
 
 sizeof_type(prod(Ts), S) :-
-    fail.
+    maplist(
+        [T, S] >> sizeof_type(T, S),
+        Ts, Ss
+    ),
+    foldl(
+        [Sx, Sy, S] >> size_sum(Sx, Sy, S),
+        Ss, [], S
+    ).
 
 sizeof_type(join(Ts), S) :-
-    fail.
+    maplist(
+        [T, S] >> sizeof_type(T, S),
+        Ts, Ss
+    ),
+    foldl(
+        [Sx, Sy, S] >> size_join(Sx, Sy, S),
+        Ss, bottom, S
+    ).
+
+sizeof_type(T, []) :-
+    T = top ; T = integer.
+
+sizeof_type(bottom, bottom).
 
 sizeof_type(u(S, _), [hole=rint(S)]).
 sizeof_type(_ ∈ T, S) :-
@@ -242,3 +279,11 @@ sizeof_type(arr(T, N), S) :-
     sizeof_type(T, St),
     Sn = N,
     size_mul(St, Sn, S).
+sizeof_type(T ⋅ _, S) :-
+    sizeof_type(T, S).
+sizeof_type(ref(Path), S) :-
+    sizeof(Path, S).
+sizeof_type(T ⋮ P, S) :-
+    sizeof_type(T, Sx),
+    size_constraint(P, Sy),
+    size_unify(Sx, Sy, S).
