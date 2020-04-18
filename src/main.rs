@@ -28,6 +28,19 @@ fn main() -> Result<(), Error> {
         println!("{} <: {}.", path, ty);
     }
 
+    for name_row in ty_table.names {
+        let path = razbor::types::as_makam_path(&name_row.path);
+        let name = razbor::types::as_makam_path(&name_row.name.data);
+
+        println!("nameof({}, {}).", path, name);
+    }
+
+    for def in ty_table.defs {
+        let path = razbor::types::as_makam_path(&def);
+
+        println!("def({}).", path)
+    }
+
     // let mut sourcer = razbor::report::Sourcer::default();
     // for err in &errors {
     //     let id = err.file_id();

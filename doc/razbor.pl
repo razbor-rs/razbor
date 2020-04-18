@@ -287,3 +287,11 @@ sizeof_type(T ⋮ P, S) :-
     sizeof_type(T, Sx),
     size_constraint(P, Sy),
     size_unify(Sx, Sy, S).
+
+is_name(path(_, Data)) :-
+    last(Data, Name),
+    \+ atom_number(Name, _).
+
+has_name(P, N) :-
+    nameof(P, N),
+    is_name(N).
