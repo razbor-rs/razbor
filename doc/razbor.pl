@@ -1,13 +1,15 @@
 :- use_module(library(pprint)).
 :- use_module(library(yall)).
 
-:- expects_dialect(sicstus).
 :- [tox].
 
 :- op(1100, xfy, user:(//)).
 :- op(990, xfy, user:(→)).
+:- op(700, xfy, user:(≠)).
 
-L // R :- if(L, true, R).
+X ≠ Y :- dif(X, Y).
+
+L // R :- L *-> true ; R.
 
 match(X, [V|Cases]) :-
     ( V = (Val → Goal), X = Val *->
@@ -90,6 +92,10 @@ ctypeof(P, T) :-
     subst(Tx, Ty),
     simpl(Ty, T).
 
+print_t(T) :-
+    WriteOps = [spacing(next_argument)],
+    print_term(T, [write_options(WriteOps)]).
+
 print_tox_ctypeof :-
     findall(P, P <: _, RawTypes),
     maplist(ctypeof_pair, RawTypes, CTypes),
@@ -110,8 +116,8 @@ print_ctypeof(PathStr) :-
     print_term(T, WriteOps).
 
 is_simple(E) :-
-    E \= prod(_),
-    E \= join(_).
+    dif(E, prod(_)),
+    dif(E, join(_)).
 
 subst_(meet([X|Xs]), meet([Y|Ys])) :-
     subst(X, Y),
@@ -122,7 +128,11 @@ subst_(V ∈ Tx, V ∈ Ty) :-
     subst(Tx, Ty).
 subst_(ref(P), T) :-
     ctypeof(P, Tx),
-    if(is_simple(Tx), T = (Tx ⋅ [P]), T = ref(P)).
+    ( is_simple(Tx) *->
+        T = (Tx ⋅ [P])
+    ;
+        T = ref(P)
+    ).
 subst(Tx, Ty) :-
     subst_(Tx, Ty) // Tx = Ty.
 
@@ -240,6 +250,9 @@ size_join(Sx, Sy, S) :- match((Sx, Sy, S), [
 size_mul(Sx, Sy, S) :- fail.
 size_unify(Sx, Sy, S) :- fail.
 
+exact_size(S, E) :-
+    member(hole=E, S).
+
 size_constraint([], []).
 size_constraint([P|Ps], [S|Ss]) :-
     (P, S) = (sizeof=C, hole=C) *->
@@ -295,3 +308,71 @@ is_name(path(_, Data)) :-
 has_name(P, N) :-
     nameof(P, N),
     is_name(N).
+
+short_nameof(P, S) :-
+    nameof(P, path(_, D)),
+    last(D, S).
+
+constant(V ∈ _, V).
+
+root_path(path(_, [_])).
+
+print_mtype(Path) :-
+    mtype(Path, T), print_t(T)
+    // ctypeof(Path, T), print_t(T).
+
+% as_datatype(T, DataType)
+mtype(Path, MT) :-
+    ctypeof(Path, T),
+    as_mtype(Path, T, MT).
+
+as_mtype(Path, prod(Prod), struct(Path, Fields)) :- 
+    root_path(Path),
+    maplist(
+        ([P, T] >> mtype(P, T)),
+        Prod, Fields
+    ).
+
+as_mtype(Path, join(Join), enum(Path, Fields)) :-
+    root_path(Path),
+    maplist(
+        [R, F] >> (
+            ref(P) = R,
+            short_nameof(P, N),
+            F = N : P
+        ),
+        Join, Fields    
+    ).
+
+as_mtype(Path, Type, data(Path, F)) :-
+    root_path(Path),
+    Type \= prod(_), Type \= join(_),
+    forget(Type, F).
+
+as_mtype(Path, Type, ShortName : F) :-
+    \+ root_path(Path),
+    Type \= prod(_), Type \= join(_),
+    nameof(Path, Name),    % TODO: use has_name
+    path(_, D) = Name,
+    last(D, ShortName),
+    forget(Type, F).
+
+forget(T, F) :- match((T, F), [
+    (_ ⋅ [Path], Path),
+    (X ⋮ _, Y) → 
+        forget(X, Y),
+    (_ ∈ X, Y) →
+        forget(X, Y),
+    (arr(Tx, Nx), Y) →
+        forget_arr(arr(Tx, Nx), Y),
+    (X, X)
+]).
+
+forget_arr(arr(Tx, Nx), F) :-
+    forget(Tx, Ty),
+    % TODO: support ref constants
+    (exact_size(Nx, rint(Ny)) *->
+        F = arr(Ty, Ny)
+    ;
+        F = vec(Ty)
+    ).
