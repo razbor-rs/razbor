@@ -34,7 +34,6 @@ fn paragraph_indices(
         .unwrap_or(newlines.len() - 1);
 
     (ls + 2, from + 1, to)
-
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -51,6 +50,15 @@ pub struct Source {
     content_start: usize,
     line_start: usize,
     file_name: String,
+}
+
+impl Source {
+    fn span_range(&self, span: Span) -> (usize, usize) {
+        (
+            span.from - self.content_start,
+            span.to - self.content_start,
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -97,6 +105,34 @@ impl Sourcer {
     }
 }
 
+fn basic_error(source: Source, span: Span, label: &str) -> Snippet {
+    let range = source.span_range(span);
+
+    Snippet {
+        title: Some(Annotation {
+            annotation_type: AnnotationType::Error,
+            label: Some(label.to_owned()),
+            id: None,
+        }),
+        footer: vec![],
+        slices: vec![
+            Slice {
+                source: source.content,
+                line_start: source.line_start,
+                origin: Some(source.file_name),
+                fold: false,
+                annotations: vec![
+                    SourceAnnotation {
+                        label: "".to_owned(),
+                        annotation_type: AnnotationType::Error,
+                        range,
+                    }
+                ]
+            }
+        ],
+    }
+}
+
 pub trait ToSnippet {
     fn to_snippet(&self, sourcer: &Sourcer) -> Snippet;
     fn file_id(&self) -> usize;
@@ -109,65 +145,13 @@ impl ToSnippet for crate::path::NameResolveError {
         match self {
             NotFound(loc) => {
                 let source = sourcer.source(*loc).unwrap();
-                let range = (
-                    loc.span.from - source.content_start,
-                    loc.span.to - source.content_start,
-                );
 
-                Snippet {
-                    title: Some(Annotation {
-                        annotation_type: AnnotationType::Error,
-                        label: Some("unknown reference".to_owned()),
-                        id: None,
-                    }),
-                    footer: vec![],
-                    slices: vec![
-                        Slice {
-                            source: source.content,
-                            line_start: source.line_start,
-                            origin: Some(source.file_name),
-                            fold: false,
-                            annotations: vec![
-                                SourceAnnotation {
-                                    label: "".to_owned(),
-                                    annotation_type: AnnotationType::Error,
-                                    range,
-                                }
-                            ]
-                        }
-                    ],
-                }
+                basic_error(source, loc.span, "unknown reference")
             },
             InvalidName(loc) => {
                 let source = sourcer.source(*loc).unwrap();
-                let range = (
-                    loc.span.from - source.content_start,
-                    loc.span.to - source.content_start,
-                );
 
-                Snippet {
-                    title: Some(Annotation {
-                        annotation_type: AnnotationType::Error,
-                        label: Some("invalid name".to_owned()),
-                        id: None,
-                    }),
-                    footer: vec![],
-                    slices: vec![
-                        Slice {
-                            source: source.content,
-                            line_start: source.line_start,
-                            origin: Some(source.file_name),
-                            fold: false,
-                            annotations: vec![
-                                SourceAnnotation {
-                                    label: "".to_owned(),
-                                    annotation_type: AnnotationType::Error,
-                                    range,
-                                }
-                            ]
-                        }
-                    ],
-                }
+                basic_error(source, loc.span, "invalid name")
             },
         }
     }
@@ -176,6 +160,92 @@ impl ToSnippet for crate::path::NameResolveError {
         use crate::path::NameResolveError::*;
         match self {
             NotFound(loc) | InvalidName(loc) =>
+                loc.file_id
+        }
+    }
+}
+
+impl ToSnippet for crate::types::ExprToTypeError {
+    fn to_snippet(&self, sourcer: &Sourcer) -> Snippet {
+        use crate::types::ExprToTypeError::*;
+
+        match self {
+            InvalidArity { name, expected, actual, location } => {
+                let source = sourcer.source(*location).unwrap();
+                let range = source.span_range(location.span);
+
+                Snippet {
+                    title: Some(Annotation {
+                        annotation_type: AnnotationType::Error,
+                        label: Some("invalid arity".to_owned()),
+                        id: None,
+                    }),
+                    footer: vec![
+                        Annotation {
+                            label: Some(format!(
+                                "`{}` takes {} arguments, but {} were passed",
+                                name, expected, actual
+                            )),
+                            id: None,
+                            annotation_type: AnnotationType::Note
+                        }
+                    ],
+                    slices: vec![
+                        Slice {
+                            source: source.content,
+                            line_start: source.line_start,
+                            origin: Some(source.file_name),
+                            fold: false,
+                            annotations: vec![
+                                SourceAnnotation {
+                                    label: "".to_owned(),
+                                    annotation_type: AnnotationType::Error,
+                                    range,
+                                }
+                            ]
+                        }
+                    ],
+                }
+            },
+            InvalidType(loc) => {
+                let source = sourcer.source(*loc).unwrap();
+
+                basic_error(source, loc.span, "invalid type")
+            },
+            InvalidSize(loc) => {
+                let source = sourcer.source(*loc).unwrap();
+
+                basic_error(source, loc.span, "invalid size")
+            },
+            InvalidRel(loc) => {
+                let source = sourcer.source(*loc).unwrap();
+
+                basic_error(source, loc.span, "invalid relation")
+            },
+            InvalidRelExpr(loc) => {
+                let source = sourcer.source(*loc).unwrap();
+
+                basic_error(source, loc.span, "invalid expression in relation")
+            },
+            UnsupportedList(loc) => {
+                let source = sourcer.source(*loc).unwrap();
+
+                basic_error(source, loc.span, "lists inside types are unsupported")
+            },
+        }
+    }
+
+    fn file_id(&self) -> usize {
+        use crate::types::ExprToTypeError::*;
+
+        match self {
+            InvalidArity { location, .. } =>
+                location.file_id,
+            InvalidType(loc)
+            | InvalidSize(loc)
+            | InvalidRel(loc)
+            | InvalidRelExpr(loc)
+            | UnsupportedList(loc) =>
                 loc.file_id
         }
     }

@@ -13,6 +13,15 @@ pub enum PathSegment {
     Name(SmolStr),
 }
 
+impl std::fmt::Display for PathSegment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PathSegment::Pos(n) => write!(f, "{}", n),
+            PathSegment::Name(name) => write!(f, "{}", name)
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Default)]
 pub struct RzPath {
     pub modules: Vec<SmolStr>,
@@ -230,6 +239,27 @@ impl ExprConverter {
         drop(self.current_name.data.pop())
     }
 
+    // This hack provides prod types for Makam
+    fn record_prod(&mut self, number: usize) {
+        let paths = (0..number)
+            .map(|n| {
+                let mut path = self.current_path.clone();
+                path.data.push(PathSegment::Pos(n));
+                Ranged::new(RawExpr::Path(path))
+            })
+            .collect();
+
+        let prod = RawExpr::Apply {
+            head: Ranged::new(":prod".into()),
+            body: paths,
+        };
+
+        self.table.rows.push(TypeRow {
+            ty: Ranged::new(prod),
+            path: self.current_path.clone(),
+        })
+    }
+
     fn visit_list(&mut self, list: &[Ranged<RawExpr>]) {
         let mut num = 0;
         for e in list {
@@ -248,6 +278,8 @@ impl ExprConverter {
 
             num += 1
         }
+
+        self.record_prod(num)
     }
 
     fn visit_data(&mut self, data: &Ranged<RawExpr>, num: Option<usize>) {

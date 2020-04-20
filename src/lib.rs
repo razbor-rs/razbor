@@ -4,6 +4,7 @@ use pest_derive::Parser;
 
 pub mod path;
 pub mod expr;
+pub mod types;
 pub mod report;
 
 #[derive(Parser)]

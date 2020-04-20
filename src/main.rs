@@ -7,28 +7,53 @@ type Error = Box<dyn std::error::Error>;
 
 fn main() -> Result<(), Error> {
     let loader = razbor::expr::ExprLoader::new();
-    let (file_table, tox) = loader.load("../tox/tox-ksy/razbor/tox.mexpr");
+    let (file_table, tox) = loader.load("../tox/tox-razbor/src/tox.mexpr");
     let mods = tox.unwrap();
 
     let converter = razbor::path::ExprConverter::new();
     let mut table = converter.convert(&mods).unwrap();
 
     let namer = razbor::path::NameResolver::new();
-    let errors = namer.resolve(&mut table).unwrap_err();
-    
-    let mut sourcer = razbor::report::Sourcer::default();
-    for err in &errors {
-        let id = err.file_id();
-        let path = &*file_table.files()[id];
-        sourcer.load_file(id, path);
+    namer.resolve(&mut table).unwrap();
+
+    let ty_conv = razbor::types::ExprToType::new();
+    // let errors = ty_conv.into_types(table).unwrap_err();
+    let ty_table = ty_conv.into_types(table).unwrap();
+
+    println!(":- [ops].\n");
+    for row in ty_table.rows {
+        let path = razbor::types::as_makam_path(&row.path);
+        let ty = razbor::types::as_makam_ty(&row.ty.data);
+
+        println!("{} <: {}.", path, ty);
     }
 
-    for err in &errors {
-        let snippet = err.to_snippet(&sourcer);
-        let dl = DisplayList::from(snippet);
-        let dlf = DisplayListFormatter::new(true, false);
-        println!("{}", dlf.format(&dl));
+    for name_row in ty_table.names {
+        let path = razbor::types::as_makam_path(&name_row.path);
+        let name = razbor::types::as_makam_path(&name_row.name.data);
+
+        println!("nameof({}, {}).", path, name);
     }
+
+    for def in ty_table.defs {
+        let path = razbor::types::as_makam_path(&def);
+
+        println!("def({}).", path)
+    }
+
+    // let mut sourcer = razbor::report::Sourcer::default();
+    // for err in &errors {
+    //     let id = err.file_id();
+    //     let path = &*file_table.files()[id];
+    //     sourcer.load_file(id, path);
+    // }
+
+    // for err in &errors {
+    //     let snippet = err.to_snippet(&sourcer);
+    //     let dl = DisplayList::from(snippet);
+    //     let dlf = DisplayListFormatter::new(true, false);
+    //     println!("{}", dlf.format(&dl));
+    // }
 
     Ok(())
 }
